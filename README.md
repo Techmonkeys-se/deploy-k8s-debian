@@ -1,5 +1,5 @@
 ![Kubernetes with Ansible](https://github.com/Edd1e360/deploy-k8s/blob/main/ansible-kubernetes.jpg)
-# Ansible Roles to deploy Kubernetes on Redhat Linux 8
+# Ansible Roles to deploy Kubernetes on Debian 10
 
 Collection of Ansible roles to setup servers and deploy a multi-master Kubernetes. Using containerd.io
 
@@ -16,7 +16,7 @@ Before i started this project i tried a lot of different deployment script but o
 The goal is to have a deployment script that deploys a fully functional production ready kubernetes cluster. A lot of it should be customizable to ones requirments.
 ## Requirements
 ------------
-- A deploy server with RHEL 8+ with ansible installed
+- A deploy server with RHEL 8+ with ansible installed or other OS.
 - User with ssh-keys and ssh-key access to all nodes as root user. 
 - All nodes need atleast 2cpu 4gig ram (bare minimum)
 
