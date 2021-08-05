@@ -1,0 +1,23 @@
+---
+  # - name: Put SELinux in permissive mode, logging actions that would be blocked.
+  #   selinux:
+  #     policy: targeted
+  #     state: permissive
+
+  - name: Disable Swap on all nodes (swapoff -a)
+    command: swapoff --all
+
+  - name: Disabling Swap on all nodes (fstab)
+    mount:
+      path: none
+      fstype: swap
+      state: absent
+
+  - name: Add IPs to /etc/hosts on master and workers
+    lineinfile:
+      dest: /etc/hosts
+      regexp: '.*{{ item }}$'
+      line: "{{ hostvars[item].ansible_host }} {{item}}"
+      state: present
+    when: hostvars[item].ansible_host is defined
+    with_items: "{{ groups.all }}"

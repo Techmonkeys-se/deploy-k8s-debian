@@ -1,0 +1,216 @@
+---
+  # - name: Adding Kuberenetes repo
+  #   yum_repository:
+  #     name: Kubernetes
+  #     description: Kubernetes yum repository
+  #     baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+  #     gpgkey: 
+  #       - https://packages.cloud.google.com/yum/doc/yum-key.gpg
+  #       - https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+  #     gpgcheck: yes
+  #     repo_gpgcheck: yes
+
+  # - name: Adding DockerCE repo
+  #   yum_repository:
+  #     name: docker-ce-stable
+  #     description: Docker CE Stable - $basearch
+  #     baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+  #     gpgkey: https://download.docker.com/linux/centos/gpg
+  #     gpgcheck: yes
+  #     repo_gpgcheck: yes
+
+  # - name: Update repo cache
+  #   yum:
+  #     update_cache: yes
+
+
+  # - name: Download gpg key for Kubernetes Repo
+  #   get_url:
+  #     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+  #     dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+  - name: Install prerequisities for apt
+    apt:
+      name: ['apt-transport-https','ca-certificates','curl','gnupg2','software-properties-common']
+      state: present
+      update_cache: yes   
+
+  - name: Add Kubernetes repo key
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Add docker repo key
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: Add Debian Backports repo
+    apt_repository:
+      repo: deb http://deb.debian.org/debian buster-backports main contrib non-free
+      state: present
+      filename: debian-backports
+
+  - name: Add Kubernetes repository
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes
+      #update_cache: yes
+
+  - name: Add docker repository
+    apt_repository:
+      repo: deb https://download.docker.com/linux/debian {{ansible_distribution_release}} stable
+      state: present
+      filename: docker
+      #update_cache: yes
+
+  - name: Update apt cache
+    apt:
+      update_cache: yes
+
+  - name: Add the br_netfilter module
+    modprobe:
+      name: br_netfilter
+      state: present
+
+  - name: Add the overlay module
+    modprobe:
+      name: overlay
+      state: present
+
+  - name: Creating a containerd.conf file for Kubernetes
+    file:
+     path: /etc/modules-load.d/containerd.conf
+     state: touch
+
+  - name: Letting iptables see bridged traffic
+    blockinfile:
+     path: /etc/modules-load.d/containerd.conf
+     block: |
+      overlay
+      br_netfilter
+
+  - name: Creating a containerd.conf file for Kubernetes
+    file:
+     path: /etc/modules-load.d/99-kubernetes-cri.conf
+     state: touch
+
+  # - name: Letting iptables see bridged traffic
+  #   blockinfile:
+  #    path: /etc/modules-load.d/99-kubernetes-cri.conf
+  #    block: |
+  #     net.bridge.bridge-nf-call-iptables  = 1
+  #     net.ipv4.ip_forward                 = 1
+  #     net.bridge.bridge-nf-call-ip6tables = 1
+
+  # - name: Apply sysctl params without reboot
+  #   shell: sysctl --system
+
+  - name: Sysctl - net.bridge.bridge-nf-call-iptables
+    sysctl:
+      name: net.bridge.bridge-nf-call-iptables
+      value: '1'
+
+  - name: Sysctl - net.ipv4.ip_forward
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: '1'
+
+  - name: Sysctl - net.bridge.bridge-nf-call-ip6tables
+    sysctl:
+      name: net.bridge.bridge-nf-call-ip6tables
+      value: '1'
+
+  - name: Install Firewalld from backports
+    apt:
+      pkg:
+        - iptables
+        - firewalld
+        - ebtables
+      state: latest
+      default-release: buster-backports
+      update-cache: yes
+
+  - name: Installing required packages
+    apt:
+     name: "{{ packages }}"
+     state: latest
+
+  - name: Create containerd folder in etc
+    file:
+      path: /etc/containerd
+      state: directory
+      mode: '0755'
+
+  - name: Configure containerd
+    shell: |
+      containerd config default | tee /etc/containerd/config.toml
+
+  - name: Fix cgroups
+    lineinfile:
+      dest: /etc/containerd/config.toml
+      insertafter: '\[plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options\]'
+      line: "            SystemdCgroup = true"
+      state: present
+
+  - name: Restarting containerd service
+    service:
+     name: containerd
+     state: restarted
+     enabled: yes
+
+  - name: Starting and Enabling the required services
+    service:
+     name: "{{ item }}"
+     state: started
+     enabled: yes
+    with_items: "{{ services }}"
+
+  - name: Allow Network Ports in Firewalld
+    firewalld:
+      zone: public
+      port: "{{ item }}"
+      state: enabled
+      permanent: yes
+      immediate: yes
+    with_items: "{{ master_ports if ('k8s_masters' in group_names) else worker_ports }}"
+
+  - name: Masquerade external zone
+    firewalld: 
+      zone: public
+      masquerade: "yes"
+      state: enabled
+      immediate: yes
+      permanent: yes
+  
+  # - name: Allow network ports in firewalld (Using shell module as firewalld module doesnt work on debian)
+  #   shell: firewall-cmd --zone=public --add-port={{ item }} --permanent
+  #   with_items: "{{ master_ports if ('k8s_masters' in group_names) else worker_ports }}"
+
+  # - name: Masquerade external zone
+  #   shell: firewall-cmd --zone=public --add-masquerade
+
+  - name: reload service firewalld
+    systemd:
+      name: firewalld
+      state: reloaded
+
+  # - name: Fix NetworkManager DNS resolution inside cluster
+  #   lineinfile:
+  #     path: /etc/NetworkManager/NetworkManager.conf
+  #     insertafter: '\#plugins=ifcfg-rh'
+  #     line: "dns=none"
+  #     state: present
+
+  - name: Comment out searchdomains
+    lineinfile:
+      dest: /etc/resolv.conf
+      backrefs: True
+      regexp: '^(\s*[^#]*)search(.*)$'
+      line: '#\1search\2'
+    ignore_errors: True
+
+  # - name: Restart NetworkManager
+  #   systemd:
+  #     name: NetworkManager
+  #     state: restarted

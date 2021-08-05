@@ -1,0 +1,21 @@
+---
+- hosts: k8s_masters
+  vars_files:
+    - group_vars/all.yml
+#  become: yes
+
+  roles:
+    - prerequisites
+    - setup-nodes
+    - add-masters
+    - encrypt-secrets
+
+- hosts: k8s_worker_nodes
+  vars_files:
+    - group_vars/all.yml
+#  become: yes
+
+  roles:
+    - prerequisites
+    - setup-nodes
+    - add-worker
