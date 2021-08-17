@@ -29,13 +29,16 @@ k8s_version: v1.21.0
 
 # Packages that will be installed on all nodes.
 packages:
+- apt-transport-https
+- ca-certificates
 - kubeadm
 - kubectl
 - kubelet
-- iproute-tc
-# - firewalld
-# - yum-utils 
-# - device-mapper-persistent-data
+- iproute2
+#- firewalld
+#- python3-firewall
+#- yum-utils 
+#- device-mapper-persistent-data
 - lvm2
 - containerd.io
 
