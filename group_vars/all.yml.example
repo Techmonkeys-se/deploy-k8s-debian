@@ -25,15 +25,12 @@ etcd_proxy_port: 2379
 bootstrap_token: abcdef.0123456789abcdef
 
 # Choose version you want to install of kubernetes
-k8s_version: v1.21.0
+k8s_version: v1.21.4
 
 # Packages that will be installed on all nodes.
 packages:
 - apt-transport-https
 - ca-certificates
-- kubeadm
-- kubectl
-- kubelet
 - iproute2
 #- firewalld
 #- python3-firewall
@@ -41,6 +38,11 @@ packages:
 #- device-mapper-persistent-data
 - lvm2
 - containerd.io
+
+k8s_packages:
+- kubeadm=1.21.4-00
+- kubectl=1.21.4-00
+- kubelet=1.21.4-00
 
 # Services to start
 services:
