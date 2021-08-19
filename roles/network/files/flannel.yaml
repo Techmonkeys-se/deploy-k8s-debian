@@ -125,7 +125,7 @@ data:
     }
   net-conf.json: |
     {
-      "Network": "10.245.0.0/16",
+      "Network": "{{ cidr_v }}",
       "Backend": {
         "Type": "vxlan"
       }

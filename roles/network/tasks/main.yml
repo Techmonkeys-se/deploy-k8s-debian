@@ -1,6 +1,9 @@
 ---
-  - name: Install Network Add-on
-    command: kubectl apply -f {{k8s_network_yaml}}
 
-#  - name: Install ingress controller
-#    command: kubectl apply -f {{ingress_controller_yaml}}
+  - name: Copy Flannel config to master0
+    template:
+      src: flannel.yaml
+      dest: /tmp/flannel.yaml
+
+  - name: Initializing Kubernetes cluster
+    shell: kubectl apply -f /tmp/flannel.yaml
