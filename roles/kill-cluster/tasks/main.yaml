@@ -2,7 +2,15 @@
 
 - name: Doing kubeadm reset on all nodes
   command: kubeadm reset -f --cert-dir /etc/kubernetes/pki
-    
+
+- name: Uninstalling kubernetes packages
+  apt:
+    pkg:
+      - kubectl
+      - kubeadm
+      - kubelet
+    state: absent
+
 - name: Clearing out old cni configurations (/var/cni/net.d)
   file:
     state: absent
