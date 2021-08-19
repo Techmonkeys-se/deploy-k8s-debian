@@ -4,6 +4,7 @@
       pkg:
         - open-iscsi
         - libnfs-utils
+        - nfs-common
       state: latest
     become: yes
 
