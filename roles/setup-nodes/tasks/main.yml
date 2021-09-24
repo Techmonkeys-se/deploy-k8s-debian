@@ -46,9 +46,10 @@
 
   - name: Add Debian Backports repo
     apt_repository:
-      repo: deb http://deb.debian.org/debian buster-backports main contrib non-free
+      repo: deb http://deb.debian.org/debian {{ansible_distribution_release}}-backports main contrib non-free
       state: present
       filename: debian-backports
+#    when: ansible_facts['distribution_major_version'] == 10
 
   - name: Add Kubernetes repository
     apt_repository:
@@ -95,13 +96,13 @@
      path: /etc/modules-load.d/99-kubernetes-cri.conf
      state: touch
 
-  # - name: Letting iptables see bridged traffic
-  #   blockinfile:
-  #    path: /etc/modules-load.d/99-kubernetes-cri.conf
-  #    block: |
-  #     net.bridge.bridge-nf-call-iptables  = 1
-  #     net.ipv4.ip_forward                 = 1
-  #     net.bridge.bridge-nf-call-ip6tables = 1
+  - name: Letting iptables see bridged traffic
+    blockinfile:
+      path: /etc/modules-load.d/99-kubernetes-cri.conf
+      block: |
+        net.bridge.bridge-nf-call-iptables  = 1
+        net.ipv4.ip_forward                 = 1
+        net.bridge.bridge-nf-call-ip6tables = 1
 
   # - name: Apply sysctl params without reboot
   #   shell: sysctl --system
@@ -128,7 +129,7 @@
         - firewalld
         - ebtables
       state: latest
-      default-release: buster-backports
+      default-release: "{{ansible_distribution_release}}-backports"
       update-cache: yes
 
   - name: Installing required packages
